@@ -1,14 +1,13 @@
 package main
 
+
 import (
   "github.com/gin-gonic/gin"
   "net/http"
-)
-
-import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"github.com/Abishek2/website-crawler-dashboard/backend/models"
+	"github.com/Abishek2/website-crawler-dashboard/backend/handlers"
 )
 
 func main() {
@@ -20,12 +19,15 @@ func main() {
 	panic("failed to connect to database")
 }
 
+db.AutoMigrate(&models.URL{}, &models.BrokenLink{})
 
   r.GET("/health", func(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{"status": "ok"})
   })
 
+  r.POST("/urls", handlers.CreateURL(db))
+
   r.Run(":8080")
 
-  db.AutoMigrate(&models.URL{}, &models.BrokenLink{})
+  
 }
