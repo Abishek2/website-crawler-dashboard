@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 	"github.com/Abishek2/website-crawler-dashboard/backend/models"
 	"github.com/Abishek2/website-crawler-dashboard/backend/handlers"
+  "github.com/Abishek2/website-crawler-dashboard/backend/crawler"
 )
 
 func main() {
@@ -20,6 +21,7 @@ func main() {
 }
 
 db.AutoMigrate(&models.URL{}, &models.BrokenLink{})
+crawler.StartWorker(db)
 
   r.GET("/health", func(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{"status": "ok"})
