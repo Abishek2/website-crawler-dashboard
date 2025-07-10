@@ -29,6 +29,9 @@ crawler.StartWorker(db)
 
   r.POST("/urls", handlers.CreateURL(db))
 
+  r.GET("/urls", handlers.GetAllURLs(db))
+  r.GET("/urls/:id", handlers.GetURLDetails(db))
+
   r.Run(":8080")
 
   
