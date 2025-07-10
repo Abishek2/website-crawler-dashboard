@@ -8,8 +8,23 @@ export default function Dashboard() {
   const [urls, setUrls] = useRecoilState(urlListState);
   const navigate = useNavigate();
 
+  const fetchUrls = async () => {
+    try {
+      const res = await api.get('/urls');
+      setUrls(res.data);
+    } catch (err) {
+      console.error('Failed to fetch URLs', err);
+    }
+  };
+
   useEffect(() => {
-    api.get('/urls').then(res => setUrls(res.data));
+    fetchUrls(); // initial fetch
+
+    const interval = setInterval(() => {
+      fetchUrls(); // refresh every 5s
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -28,22 +43,18 @@ export default function Dashboard() {
           </tr>
         </thead>
         <tbody>
-          {urls.map((item: any) => (
-            <tr
-              key={item.id}
-              className="hover:bg-blue-50 cursor-pointer"
-              onClick={() => navigate(`/details/${item.id}`)}
-            >
-              <td className="p-2 border">{item.title || '(Untitled)'}</td>
-              <td className="p-2 border">{item.html_version}</td>
-              <td className="p-2 border">{item.internal_links}</td>
-              <td className="p-2 border">{item.external_links}</td>
-              <td className="p-2 border">{item.broken_links}</td>
-              <td className="p-2 border">{item.login_form_found ? 'Yes' : 'No'}</td>
-              <td className="p-2 border">{item.status}</td>
-            </tr>
-          ))}
-        </tbody>
+  {urls.map((item: any) => (
+    <tr key={item.id} className="cursor-pointer" onClick={() => navigate(`/details/${item.id}`)}>
+      <td>{item.title || '—'}</td>
+      <td>{item.html_version || '—'}</td>
+      <td>{item.internal_links}</td>
+      <td>{item.external_links}</td>
+      <td>{item.broken_links}</td>
+      <td>{item.login_form_found ? 'Yes' : 'No'}</td>
+      <td className="text-sm text-blue-600">{item.status}</td>
+    </tr>
+  ))}
+</tbody>
       </table>
     </div>
   );
