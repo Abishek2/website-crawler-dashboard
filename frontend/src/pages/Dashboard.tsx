@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRecoilState } from 'recoil';
 import { urlListState } from '../state/urls';
 import api from '../api';
@@ -7,6 +7,23 @@ import { useNavigate } from 'react-router-dom';
 export default function Dashboard() {
   const [urls, setUrls] = useRecoilState(urlListState);
   const navigate = useNavigate();
+
+  const [newUrl, setNewUrl] = useState('');
+const [submitting, setSubmitting] = useState(false);
+
+const submitUrl = async () => {
+  if (!newUrl.trim()) return;
+  setSubmitting(true);
+  try {
+    await api.post('/urls', { url: newUrl.trim() });
+    setNewUrl('');
+    fetchUrls(); // refresh list
+  } catch (err) {
+    console.error('Failed to submit URL', err);
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const fetchUrls = async () => {
     try {
@@ -30,6 +47,23 @@ export default function Dashboard() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Analyzed URLs</h1>
+      <div className="mb-4 flex items-center gap-2">
+  <input
+    type="text"
+    value={newUrl}
+    onChange={(e) => setNewUrl(e.target.value)}
+    placeholder="Enter website URL"
+    className="border p-2 rounded w-full max-w-md"
+  />
+  <button
+    onClick={submitUrl}
+    disabled={submitting}
+    className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+  >
+    {submitting ? 'Submitting...' : 'Analyze'}
+  </button>
+</div>
+
       <table className="min-w-full border border-gray-300">
         <thead>
           <tr className="bg-gray-100 text-left">
