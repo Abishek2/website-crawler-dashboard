@@ -121,17 +121,15 @@ npm run dev
 Visit: [http://localhost:5173](http://localhost:5173)  
 Ensure the backend is running on: `http://localhost:8080`
 
----
-
-
-```
 ## 🖼️ Screenshots
 
 ### Dashboard View  
 ![Dashboard](https://raw.githubusercontent.com/Abishek2/website-crawler-dashboard/main/docs/screenshots/dashboard.png)
 
 
-```
+
+
+
 
 ---
 
