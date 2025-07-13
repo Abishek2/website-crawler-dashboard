@@ -128,7 +128,8 @@ Ensure the backend is running on: `http://localhost:8080`
 ## 🖼️ Screenshots
 
 ### Dashboard View  
-![Dashboard](docs/screenshots/dashboard.png)
+![Dashboard](https://raw.githubusercontent.com/Abishek2/website-crawler-dashboard/main/docs/screenshots/dashboard.png)
+
 
 ```
 
