@@ -17,6 +17,7 @@ import {
   TextField,
   InputAdornment,
   TablePagination,
+  TableSortLabel,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useRecoilState } from 'recoil';
@@ -25,6 +26,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/api';
 import toast from 'react-hot-toast';
 import FilterBar from '../components/Filter/FilterBar';
+
+type Order = 'asc' | 'desc';
 
 export default function Dashboard() {
   const [urls, setUrls] = useRecoilState(urlListState);
@@ -35,6 +38,8 @@ export default function Dashboard() {
   const [filters, setFilters] = useState({ htmlVersion: '', status: '', loginForm: '' });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [orderBy, setOrderBy] = useState<string>('title');
+  const [order, setOrder] = useState<Order>('asc');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -115,6 +120,12 @@ export default function Dashboard() {
     setPage(0);
   };
 
+  const handleSort = (property: string) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
   const filteredUrls = urls.filter((url) => {
     const matchesSearch =
       url.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -128,60 +139,69 @@ export default function Dashboard() {
     return matchesSearch && matchesHtml && matchesStatus && matchesLogin;
   });
 
+  const sortedUrls = [...filteredUrls].sort((a, b) => {
+    const aVal = (a as any)[orderBy];
+    const bVal = (b as any)[orderBy];
+    if (typeof aVal === 'string' && typeof bVal === 'string') {
+      return order === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    }
+    return order === 'asc' ? aVal - bVal : bVal - aVal;
+  });
+
   return (
     <Container maxWidth="xl" sx={{ pt: 6 }}>
       <Typography variant="h4" fontWeight="bold" mb={4} color="primary">
         Analyzed URLs Dashboard
       </Typography>
 
-      {/* Add URL Section */}
-      <Box
-        component="form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          submitUrl();
-        }}
-        display="flex"
-        flexDirection={{ xs: 'column', md: 'row' }}
-        gap={2}
-        alignItems="center"
-        mb={4}
-      >
-        <TextField
-          fullWidth
-          variant="outlined"
-          label="Enter a website URL"
-          value={newUrl}
-          onChange={(e) => setNewUrl(e.target.value)}
-          sx={{
-            backgroundColor: '#fff',
-            borderRadius: '20px',     // More rounded edges
-            '& .MuiOutlinedInput-root': {
-              borderRadius: '20px',
-            },
-          }}
-        />
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={submitting}
-          sx={{
-            height: 56,
-            px: 4,
-            bgcolor: '#0F5C96',  // SAP blue
-            '&:hover': {
-              bgcolor: '#0a436d',
-            },
-            borderRadius: '20px', // Rounded button
-            textTransform: 'none',
-            fontWeight: '600',
-          }}
-        >
-          {submitting ? 'Submitting...' : 'Add URL'}
-        </Button>
-      </Box>
+      {/* Input Section */}
+      <Paper elevation={2} sx={{ p: 3, borderRadius: 4, mb: 4 }}>
+  <Stack
+    direction={{ xs: 'column', sm: 'row' }}
+    spacing={2}
+    alignItems="center"
+    justifyContent="space-between"
+  >
+    <TextField
+      fullWidth
+      variant="outlined"
+      label="Enter website URL"
+      value={newUrl}
+      onChange={(e) => setNewUrl(e.target.value)}
+      sx={{
+        backgroundColor: '#fff',
+        borderRadius: '20px',
+        maxWidth: { sm: '500px' },
+        '& .MuiOutlinedInput-root': {
+          borderRadius: '20px',
+        },
+      }}
+    />
+    <Button
+      type="submit"
+      variant="contained"
+      onClick={submitUrl}
+      disabled={submitting}
+      sx={{
+        whiteSpace: 'nowrap',
+        px: 4,
+        py: 1.5,
+        background: 'linear-gradient(to right, #0F5C96, #1976d2)',
+        boxShadow: '0 3px 6px rgba(0,0,0,0.1)',
+        fontWeight: 600,
+        borderRadius: '30px',
+        textTransform: 'none',
+        '&:hover': {
+          background: 'linear-gradient(to right, #0c4a75, #1565c0)',
+        },
+      }}
+    >
+      {submitting ? 'Submitting...' : 'Add URL'}
+    </Button>
+  </Stack>
+</Paper>
 
-      {/* Search + Filter */}
+      {/* Search and Filter */}
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" mb={3} spacing={2}>
         <TextField
           variant="outlined"
@@ -208,39 +228,52 @@ export default function Dashboard() {
         <FilterBar filters={filters} setFilters={setFilters} />
       </Stack>
 
-      {/* Bulk Buttons */}
+      {/* Bulk Actions */}
       {selectedIds.length > 0 && (
         <Stack direction="row" spacing={2} mb={2}>
-          <Button onClick={bulkReanalyze} variant="contained" color="primary" sx={{ borderRadius: '20px', textTransform: 'none' }}>
+          <Button onClick={bulkReanalyze} variant="contained" color="primary" sx={{ borderRadius: '20px' }}>
             Re-analyze
           </Button>
-          <Button onClick={bulkDelete} variant="contained" color="error" sx={{ borderRadius: '20px', textTransform: 'none' }}>
+          <Button onClick={bulkDelete} variant="contained" color="error" sx={{ borderRadius: '20px' }}>
             Delete
           </Button>
-          <Button onClick={bulkCancel} variant="contained" color="secondary" sx={{ borderRadius: '20px', textTransform: 'none' }}>
+          <Button onClick={bulkCancel} variant="contained" color="secondary" sx={{ borderRadius: '20px' }}>
             Cancel
           </Button>
         </Stack>
       )}
 
-      {/* Table */}
+      {/* Table Section */}
       <Paper>
         <TableContainer>
           <Table>
             <TableHead sx={{ backgroundColor: '#0F5C96' }}>
               <TableRow>
                 <TableCell />
-                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>Title</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>HTML</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>Internal</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>External</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>Broken</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>Login</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>Status</TableCell>
+                {[
+                  { label: 'Title', key: 'title' },
+                  { label: 'HTML', key: 'html_version' },
+                  { label: 'Internal', key: 'internal_links' },
+                  { label: 'External', key: 'external_links' },
+                  { label: 'Broken', key: 'broken_links' },
+                  { label: 'Login', key: 'login_form_found' },
+                  { label: 'Status', key: 'status' },
+                ].map(({ label, key }) => (
+                  <TableCell key={key} sx={{ color: '#fff', fontWeight: '700' }}>
+                    <TableSortLabel
+                      active={orderBy === key}
+                      direction={orderBy === key ? order : 'asc'}
+                      onClick={() => handleSort(key)}
+                      sx={{ color: '#fff', '&.Mui-active': { color: '#fff' } }}
+                    >
+                      {label}
+                    </TableSortLabel>
+                  </TableCell>
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredUrls.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((item) => (
+              {sortedUrls.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((item) => (
                 <TableRow
                   key={item.id}
                   hover
@@ -295,7 +328,7 @@ export default function Dashboard() {
         </TableContainer>
         <TablePagination
           component="div"
-          count={filteredUrls.length}
+          count={sortedUrls.length}
           page={page}
           onPageChange={handleChangePage}
           rowsPerPage={rowsPerPage}
