@@ -1,16 +1,18 @@
 version: '3.8'
 
 services:
+  # MySQL database service
   mysql:
-    image: mysql:8
-    container_name: sykell_mysql
+    image: mysql:8                      # Use official MySQL 8 image
+    container_name: sykell_mysql        # Name of the running container
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: crawler
+      MYSQL_ROOT_PASSWORD: root         # Root password for MySQL
+      MYSQL_DATABASE: crawler           # Default database name to create
     ports:
-      - "3306:3306"
+      - "3306:3306"                     # Expose MySQL on host port 3306
     volumes:
-      - mysqldata:/var/lib/mysql
+      - mysqldata:/var/lib/mysql        # Persist MySQL data between container restarts
 
+# Define named volume to store database data persistently
 volumes:
   mysqldata:
