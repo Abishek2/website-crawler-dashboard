@@ -14,6 +14,7 @@ func StartWorker(db *gorm.DB) {
 			var url models.URL
 			// Get one queued URL
 			if err := db.Where("status = ?", "queued").First(&url).Error; err == nil {
+				
 				log.Println("Processing:", url.URL)
 				db.Model(&url).Update("status", "running")
 

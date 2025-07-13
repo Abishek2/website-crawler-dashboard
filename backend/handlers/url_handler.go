@@ -67,3 +67,53 @@ func GetURLDetails(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+func ReanalyzeURL(db *gorm.DB) gin.HandlerFunc {
+  return func(c *gin.Context) {
+    id := c.Param("id")
+
+    var url models.URL
+    if err := db.First(&url, id).Error; err != nil {
+      c.JSON(http.StatusNotFound, gin.H{"error": "URL not found"})
+      return
+    }
+
+    url.Status = "queued"
+    db.Save(&url)
+
+    c.JSON(http.StatusOK, gin.H{"message": "URL requeued for analysis"})
+  }
+}
+
+func DeleteURL(db *gorm.DB) gin.HandlerFunc {
+  return func(c *gin.Context) {
+    id := c.Param("id")
+
+    db.Delete(&models.BrokenLink{}, "url_id = ?", id)
+    db.Delete(&models.URL{}, id)
+
+    c.JSON(http.StatusOK, gin.H{"message": "URL deleted"})
+  }
+}
+
+func CancelURL(db *gorm.DB) gin.HandlerFunc {
+  return func(c *gin.Context) {
+    id := c.Param("id")
+
+    var url models.URL
+    if err := db.First(&url, id).Error; err != nil {
+      c.JSON(http.StatusNotFound, gin.H{"error": "URL not found"})
+      return
+    }
+
+    if url.Status == "done" || url.Status == "error" {
+      c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot cancel a finished crawl"})
+      return
+    }
+
+    url.Status = "cancelled"
+    db.Save(&url)
+
+    c.JSON(http.StatusOK, gin.H{"message": "Crawl cancelled"})
+  }
+}
+
