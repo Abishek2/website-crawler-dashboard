@@ -7,6 +7,7 @@ import {
   type SelectChangeEvent,
 } from '@mui/material';
 
+// Props interface for the FilterBar component
 interface FilterBarProps {
   filters: {
     htmlVersion: string;
@@ -16,13 +17,16 @@ interface FilterBarProps {
   setFilters: (filters: FilterBarProps['filters']) => void;
 }
 
+// FilterBar component allows filtering the dashboard table based on HTML version, status, and login form presence
 export default function FilterBar({ filters, setFilters }: FilterBarProps) {
+  // Update filter values when user selects a different option
   const handleChange = (e: SelectChangeEvent) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
   return (
     <Box display="flex" flexWrap="wrap" gap={2} mb={3}>
+      {/* HTML Version Filter */}
       <FormControl sx={{ minWidth: 160 }} size="small">
         <InputLabel>HTML Version</InputLabel>
         <Select
@@ -37,6 +41,7 @@ export default function FilterBar({ filters, setFilters }: FilterBarProps) {
         </Select>
       </FormControl>
 
+      {/* Status Filter */}
       <FormControl sx={{ minWidth: 160 }} size="small">
         <InputLabel>Status</InputLabel>
         <Select
@@ -54,6 +59,7 @@ export default function FilterBar({ filters, setFilters }: FilterBarProps) {
         </Select>
       </FormControl>
 
+      {/* Login Form Found Filter */}
       <FormControl sx={{ minWidth: 160 }} size="small">
         <InputLabel>Login Form</InputLabel>
         <Select

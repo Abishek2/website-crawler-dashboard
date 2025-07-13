@@ -1,4 +1,3 @@
-// src/pages/Dashboard.tsx
 import { useEffect, useState } from 'react';
 import {
   Box,
@@ -30,24 +29,26 @@ import FilterBar from '../components/Filter/FilterBar';
 type Order = 'asc' | 'desc';
 
 export default function Dashboard() {
-  const [urls, setUrls] = useRecoilState(urlListState);
-  const [newUrl, setNewUrl] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState({ htmlVersion: '', status: '', loginForm: '' });
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [orderBy, setOrderBy] = useState<string>('title');
-  const [order, setOrder] = useState<Order>('asc');
-  const navigate = useNavigate();
+  const [urls, setUrls] = useRecoilState(urlListState); // Global state for all crawled URLs
+  const [newUrl, setNewUrl] = useState(''); // Form input value for new URL
+  const [submitting, setSubmitting] = useState(false); // Button loading state
+  const [selectedIds, setSelectedIds] = useState<number[]>([]); // Checkbox selection
+  const [searchQuery, setSearchQuery] = useState(''); // Search bar input
+  const [filters, setFilters] = useState({ htmlVersion: '', status: '', loginForm: '' }); // Filter settings
+  const [page, setPage] = useState(0); // Pagination
+  const [rowsPerPage, setRowsPerPage] = useState(10); // Pagination
+  const [orderBy, setOrderBy] = useState<string>('title'); // Sorting column
+  const [order, setOrder] = useState<Order>('asc'); // Sorting direction
+  const navigate = useNavigate(); // Router navigation
 
+  // Fetch data on mount and poll every 5 seconds
   useEffect(() => {
     fetchUrls();
     const interval = setInterval(fetchUrls, 5000);
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch URLs from the backend
   const fetchUrls = async () => {
     try {
       const res = await api.get('/urls');
@@ -57,6 +58,7 @@ export default function Dashboard() {
     }
   };
 
+  // Submit new URL to backend
   const submitUrl = async () => {
     if (!newUrl.trim()) return;
     setSubmitting(true);
@@ -72,12 +74,14 @@ export default function Dashboard() {
     }
   };
 
+  // Toggle checkbox selection
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
+  // Perform delete for all selected URLs
   const bulkDelete = async () => {
     try {
       await Promise.all(selectedIds.map((id) => api.delete(`/urls/${id}`)));
@@ -89,6 +93,7 @@ export default function Dashboard() {
     }
   };
 
+  // Reanalyze all selected URLs
   const bulkReanalyze = async () => {
     try {
       await Promise.all(selectedIds.map((id) => api.post(`/urls/${id}/reanalyze`)));
@@ -100,6 +105,7 @@ export default function Dashboard() {
     }
   };
 
+  // Cancel processing for selected URLs
   const bulkCancel = async () => {
     try {
       await Promise.all(selectedIds.map((id) => api.post(`/urls/${id}/cancel`)));
@@ -111,21 +117,25 @@ export default function Dashboard() {
     }
   };
 
+  // Pagination: change page
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
 
+  // Pagination: change rows per page
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
 
+  // Sort table by column
   const handleSort = (property: string) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
   };
 
+  // Filter URLs based on search & filter bar
   const filteredUrls = urls.filter((url) => {
     const matchesSearch =
       url.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -139,6 +149,7 @@ export default function Dashboard() {
     return matchesSearch && matchesHtml && matchesStatus && matchesLogin;
   });
 
+  // Apply sorting
   const sortedUrls = [...filteredUrls].sort((a, b) => {
     const aVal = (a as any)[orderBy];
     const bVal = (b as any)[orderBy];
@@ -154,54 +165,54 @@ export default function Dashboard() {
         Analyzed URLs Dashboard
       </Typography>
 
-      {/* Input Section */}
+      {/* Add URL Form */}
       <Paper elevation={2} sx={{ p: 3, borderRadius: 4, mb: 4 }}>
-  <Stack
-    direction={{ xs: 'column', sm: 'row' }}
-    spacing={2}
-    alignItems="center"
-    justifyContent="space-between"
-  >
-    <TextField
-      fullWidth
-      variant="outlined"
-      label="Enter website URL"
-      value={newUrl}
-      onChange={(e) => setNewUrl(e.target.value)}
-      sx={{
-        backgroundColor: '#fff',
-        borderRadius: '20px',
-        maxWidth: { sm: '500px' },
-        '& .MuiOutlinedInput-root': {
-          borderRadius: '20px',
-        },
-      }}
-    />
-    <Button
-      type="submit"
-      variant="contained"
-      onClick={submitUrl}
-      disabled={submitting}
-      sx={{
-        whiteSpace: 'nowrap',
-        px: 4,
-        py: 1.5,
-        background: 'linear-gradient(to right, #0F5C96, #1976d2)',
-        boxShadow: '0 3px 6px rgba(0,0,0,0.1)',
-        fontWeight: 600,
-        borderRadius: '30px',
-        textTransform: 'none',
-        '&:hover': {
-          background: 'linear-gradient(to right, #0c4a75, #1565c0)',
-        },
-      }}
-    >
-      {submitting ? 'Submitting...' : 'Add URL'}
-    </Button>
-  </Stack>
-</Paper>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          <TextField
+            fullWidth
+            variant="outlined"
+            label="Enter website URL"
+            value={newUrl}
+            onChange={(e) => setNewUrl(e.target.value)}
+            sx={{
+              backgroundColor: '#fff',
+              borderRadius: '20px',
+              maxWidth: { sm: '500px' },
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '20px',
+              },
+            }}
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            onClick={submitUrl}
+            disabled={submitting}
+            sx={{
+              whiteSpace: 'nowrap',
+              px: 4,
+              py: 1.5,
+              background: 'linear-gradient(to right, #0F5C96, #1976d2)',
+              boxShadow: '0 3px 6px rgba(0,0,0,0.1)',
+              fontWeight: 600,
+              borderRadius: '30px',
+              textTransform: 'none',
+              '&:hover': {
+                background: 'linear-gradient(to right, #0c4a75, #1565c0)',
+              },
+            }}
+          >
+            {submitting ? 'Submitting...' : 'Add URL'}
+          </Button>
+        </Stack>
+      </Paper>
 
-      {/* Search and Filter */}
+      {/* Search and Filter Controls */}
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" mb={3} spacing={2}>
         <TextField
           variant="outlined"
@@ -243,7 +254,7 @@ export default function Dashboard() {
         </Stack>
       )}
 
-      {/* Table Section */}
+      {/* Data Table */}
       <Paper>
         <TableContainer>
           <Table>
@@ -326,6 +337,8 @@ export default function Dashboard() {
             </TableBody>
           </Table>
         </TableContainer>
+
+        {/* Pagination Controls */}
         <TablePagination
           component="div"
           count={sortedUrls.length}
