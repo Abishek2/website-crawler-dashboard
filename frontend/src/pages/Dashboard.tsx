@@ -1,29 +1,47 @@
+// src/pages/Dashboard.tsx
 import { useEffect, useState } from 'react';
+import {
+  Box,
+  Container,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Checkbox,
+  Button,
+  Stack,
+  TextField,
+  InputAdornment,
+  TablePagination,
+} from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import { useRecoilState } from 'recoil';
 import { urlListState } from '../state/urls';
-import api from '../api';
 import { useNavigate } from 'react-router-dom';
+import api from '../api/api';
+import toast from 'react-hot-toast';
+import FilterBar from '../components/Filter/FilterBar';
 
 export default function Dashboard() {
   const [urls, setUrls] = useRecoilState(urlListState);
+  const [newUrl, setNewUrl] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState({ htmlVersion: '', status: '', loginForm: '' });
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const navigate = useNavigate();
 
-  const [newUrl, setNewUrl] = useState('');
-const [submitting, setSubmitting] = useState(false);
-
-const submitUrl = async () => {
-  if (!newUrl.trim()) return;
-  setSubmitting(true);
-  try {
-    await api.post('/urls', { url: newUrl.trim() });
-    setNewUrl('');
-    fetchUrls(); // refresh list
-  } catch (err) {
-    console.error('Failed to submit URL', err);
-  } finally {
-    setSubmitting(false);
-  }
-};
+  useEffect(() => {
+    fetchUrls();
+    const interval = setInterval(fetchUrls, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchUrls = async () => {
     try {
@@ -34,62 +52,257 @@ const submitUrl = async () => {
     }
   };
 
-  useEffect(() => {
-    fetchUrls(); // initial fetch
+  const submitUrl = async () => {
+    if (!newUrl.trim()) return;
+    setSubmitting(true);
+    try {
+      await api.post('/urls', { url: newUrl.trim() });
+      setNewUrl('');
+      fetchUrls();
+      toast.success('URL submitted');
+    } catch (err) {
+      toast.error('Submission failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    const interval = setInterval(() => {
-      fetchUrls(); // refresh every 5s
-    }, 5000);
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
 
-    return () => clearInterval(interval);
-  }, []);
+  const bulkDelete = async () => {
+    try {
+      await Promise.all(selectedIds.map((id) => api.delete(`/urls/${id}`)));
+      setSelectedIds([]);
+      fetchUrls();
+      toast.success('URLs deleted');
+    } catch (err) {
+      toast.error('Delete failed');
+    }
+  };
+
+  const bulkReanalyze = async () => {
+    try {
+      await Promise.all(selectedIds.map((id) => api.post(`/urls/${id}/reanalyze`)));
+      setSelectedIds([]);
+      fetchUrls();
+      toast.success('Re-analysis started');
+    } catch (err) {
+      toast.error('Re-analyze failed');
+    }
+  };
+
+  const bulkCancel = async () => {
+    try {
+      await Promise.all(selectedIds.map((id) => api.post(`/urls/${id}/cancel`)));
+      setSelectedIds([]);
+      fetchUrls();
+      toast.success('Canceled');
+    } catch (err) {
+      toast.error('Cancel failed');
+    }
+  };
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const filteredUrls = urls.filter((url) => {
+    const matchesSearch =
+      url.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      url.url?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesHtml = !filters.htmlVersion || url.html_version === filters.htmlVersion;
+    const matchesStatus = !filters.status || url.status === filters.status;
+    const matchesLogin =
+      !filters.loginForm ||
+      (filters.loginForm === 'yes' && url.login_form_found) ||
+      (filters.loginForm === 'no' && !url.login_form_found);
+    return matchesSearch && matchesHtml && matchesStatus && matchesLogin;
+  });
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Analyzed URLs</h1>
-      <div className="mb-4 flex items-center gap-2">
-  <input
-    type="text"
-    value={newUrl}
-    onChange={(e) => setNewUrl(e.target.value)}
-    placeholder="Enter website URL"
-    className="border p-2 rounded w-full max-w-md"
-  />
-  <button
-    onClick={submitUrl}
-    disabled={submitting}
-    className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
-  >
-    {submitting ? 'Submitting...' : 'Analyze'}
-  </button>
-</div>
+    <Container maxWidth="xl" sx={{ pt: 6 }}>
+      <Typography variant="h4" fontWeight="bold" mb={4} color="primary">
+        Analyzed URLs Dashboard
+      </Typography>
 
-      <table className="min-w-full border border-gray-300">
-        <thead>
-          <tr className="bg-gray-100 text-left">
-            <th className="p-2 border">Title</th>
-            <th className="p-2 border">HTML Version</th>
-            <th className="p-2 border">Internal</th>
-            <th className="p-2 border">External</th>
-            <th className="p-2 border">Broken</th>
-            <th className="p-2 border">Login Form</th>
-            <th className="p-2 border">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-  {urls.map((item: any) => (
-    <tr key={item.id} className="cursor-pointer" onClick={() => navigate(`/details/${item.id}`)}>
-      <td>{item.title || '—'}</td>
-      <td>{item.html_version || '—'}</td>
-      <td>{item.internal_links}</td>
-      <td>{item.external_links}</td>
-      <td>{item.broken_links}</td>
-      <td>{item.login_form_found ? 'Yes' : 'No'}</td>
-      <td className="text-sm text-blue-600">{item.status}</td>
-    </tr>
-  ))}
-</tbody>
-      </table>
-    </div>
+      {/* Add URL Section */}
+      <Box
+        component="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submitUrl();
+        }}
+        display="flex"
+        flexDirection={{ xs: 'column', md: 'row' }}
+        gap={2}
+        alignItems="center"
+        mb={4}
+      >
+        <TextField
+          fullWidth
+          variant="outlined"
+          label="Enter a website URL"
+          value={newUrl}
+          onChange={(e) => setNewUrl(e.target.value)}
+          sx={{
+            backgroundColor: '#fff',
+            borderRadius: '20px',     // More rounded edges
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '20px',
+            },
+          }}
+        />
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={submitting}
+          sx={{
+            height: 56,
+            px: 4,
+            bgcolor: '#0F5C96',  // SAP blue
+            '&:hover': {
+              bgcolor: '#0a436d',
+            },
+            borderRadius: '20px', // Rounded button
+            textTransform: 'none',
+            fontWeight: '600',
+          }}
+        >
+          {submitting ? 'Submitting...' : 'Add URL'}
+        </Button>
+      </Box>
+
+      {/* Search + Filter */}
+      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" mb={3} spacing={2}>
+        <TextField
+          variant="outlined"
+          placeholder="Search by URL or Title"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            backgroundColor: '#fff',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: 400,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '20px',
+            },
+          }}
+        />
+        <FilterBar filters={filters} setFilters={setFilters} />
+      </Stack>
+
+      {/* Bulk Buttons */}
+      {selectedIds.length > 0 && (
+        <Stack direction="row" spacing={2} mb={2}>
+          <Button onClick={bulkReanalyze} variant="contained" color="primary" sx={{ borderRadius: '20px', textTransform: 'none' }}>
+            Re-analyze
+          </Button>
+          <Button onClick={bulkDelete} variant="contained" color="error" sx={{ borderRadius: '20px', textTransform: 'none' }}>
+            Delete
+          </Button>
+          <Button onClick={bulkCancel} variant="contained" color="secondary" sx={{ borderRadius: '20px', textTransform: 'none' }}>
+            Cancel
+          </Button>
+        </Stack>
+      )}
+
+      {/* Table */}
+      <Paper>
+        <TableContainer>
+          <Table>
+            <TableHead sx={{ backgroundColor: '#0F5C96' }}>
+              <TableRow>
+                <TableCell />
+                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>Title</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>HTML</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>Internal</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>External</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>Broken</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>Login</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: '700' }}>Status</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredUrls.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((item) => (
+                <TableRow
+                  key={item.id}
+                  hover
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/details/${item.id}`)}
+                >
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedIds.includes(item.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={() => toggleSelect(item.id)}
+                      color="primary"
+                    />
+                  </TableCell>
+                  <TableCell>{item.title || '—'}</TableCell>
+                  <TableCell>{item.html_version || '—'}</TableCell>
+                  <TableCell>{item.internal_links}</TableCell>
+                  <TableCell>{item.external_links}</TableCell>
+                  <TableCell>{item.broken_links}</TableCell>
+                  <TableCell>{item.login_form_found ? 'Yes' : 'No'}</TableCell>
+                  <TableCell>
+                    <Box
+                      component="span"
+                      sx={{
+                        px: 2,
+                        py: 0.5,
+                        borderRadius: 2,
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        color: '#fff',
+                        backgroundColor:
+                          item.status === 'done'
+                            ? 'green'
+                            : item.status === 'queued'
+                            ? 'orange'
+                            : item.status === 'running'
+                            ? 'blue'
+                            : item.status === 'error'
+                            ? 'red'
+                            : item.status === 'cancelled'
+                            ? 'gray'
+                            : 'black',
+                      }}
+                    >
+                      {item.status}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          component="div"
+          count={filteredUrls.length}
+          page={page}
+          onPageChange={handleChangePage}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[5, 10, 20, 50]}
+        />
+      </Paper>
+    </Container>
   );
 }
